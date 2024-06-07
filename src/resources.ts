@@ -1,5 +1,15 @@
-import { DynamoDB, AppSync, IAM, Fn, StringParameter, NumberParameter, Refs, IntrinsicFunction, DeletionPolicy } from 'cloudform-types';
-import Output from 'cloudform-types/types/output';
+import {
+  DynamoDB,
+  AppSync,
+  IAM,
+  Fn,
+  StringParameter,
+  NumberParameter,
+  Refs,
+  IntrinsicFunction,
+  DeletionPolicy,
+} from "cloudform-types";
+import Output from "cloudform-types/types/output";
 import {
   DynamoDBMappingTemplate,
   printBlock,
@@ -22,7 +32,7 @@ import {
   and,
   RESOLVER_VERSION_ID,
   Expression,
-} from 'graphql-mapping-template';
+} from "graphql-mapping-template";
 import {
   ResourceConstants,
   plurality,
@@ -31,12 +41,12 @@ import {
   ModelResourceIDs,
   SyncResourceIDs,
   getBaseType,
-} from 'graphql-transformer-common';
-import { plural } from 'pluralize';
-import { SyncConfig, SyncUtils } from 'graphql-transformer-core';
-import Template from 'cloudform-types/types/template';
-import md5 from 'md5';
-import { InputObjectTypeDefinitionNode } from 'graphql';
+} from "graphql-transformer-common";
+import { plural } from "pluralize";
+import { SyncConfig, SyncUtils } from "graphql-transformer-core";
+import Template from "cloudform-types/types/template";
+import md5 from "md5";
+import { InputObjectTypeDefinitionNode } from "graphql";
 
 type MutationResolverInput = {
   type: string;
@@ -56,29 +66,34 @@ type MutationUpdateResolverInput = MutationResolverInput & {
 export class ResourceFactory {
   public makeParams() {
     return {
-      [ResourceConstants.PARAMETERS.DynamoDBModelTableReadIOPS]: new NumberParameter({
-        Description: 'The number of read IOPS the table should support.',
-        Default: 5,
-      }),
-      [ResourceConstants.PARAMETERS.DynamoDBModelTableWriteIOPS]: new NumberParameter({
-        Description: 'The number of write IOPS the table should support.',
-        Default: 5,
-      }),
+      [ResourceConstants.PARAMETERS.DynamoDBModelTableReadIOPS]:
+        new NumberParameter({
+          Description: "The number of read IOPS the table should support.",
+          Default: 5,
+        }),
+      [ResourceConstants.PARAMETERS.DynamoDBModelTableWriteIOPS]:
+        new NumberParameter({
+          Description: "The number of write IOPS the table should support.",
+          Default: 5,
+        }),
       [ResourceConstants.PARAMETERS.DynamoDBBillingMode]: new StringParameter({
-        Description: 'Configure @model types to create DynamoDB tables with PAY_PER_REQUEST or PROVISIONED billing modes.',
-        Default: 'PAY_PER_REQUEST',
-        AllowedValues: ['PAY_PER_REQUEST', 'PROVISIONED'],
+        Description:
+          "Configure @model types to create DynamoDB tables with PAY_PER_REQUEST or PROVISIONED billing modes.",
+        Default: "PAY_PER_REQUEST",
+        AllowedValues: ["PAY_PER_REQUEST", "PROVISIONED"],
       }),
-      [ResourceConstants.PARAMETERS.DynamoDBEnablePointInTimeRecovery]: new StringParameter({
-        Description: 'Whether to enable Point in Time Recovery on the table',
-        Default: 'false',
-        AllowedValues: ['true', 'false'],
-      }),
-      [ResourceConstants.PARAMETERS.DynamoDBEnableServerSideEncryption]: new StringParameter({
-        Description: 'Enable server side encryption powered by KMS.',
-        Default: 'true',
-        AllowedValues: ['true', 'false'],
-      }),
+      [ResourceConstants.PARAMETERS.DynamoDBEnablePointInTimeRecovery]:
+        new StringParameter({
+          Description: "Whether to enable Point in Time Recovery on the table",
+          Default: "false",
+          AllowedValues: ["true", "false"],
+        }),
+      [ResourceConstants.PARAMETERS.DynamoDBEnableServerSideEncryption]:
+        new StringParameter({
+          Description: "Enable server side encryption powered by KMS.",
+          Default: "true",
+          AllowedValues: ["true", "false"],
+        }),
     };
   }
 
@@ -89,25 +104,31 @@ export class ResourceFactory {
     return {
       Parameters: this.makeParams(),
       Resources: {
-        [ResourceConstants.RESOURCES.GraphQLAPILogicalID]: this.makeAppSyncAPI(),
+        [ResourceConstants.RESOURCES.GraphQLAPILogicalID]:
+          this.makeAppSyncAPI(),
       },
       Outputs: {
         [ResourceConstants.OUTPUTS.GraphQLAPIIdOutput]: this.makeAPIIDOutput(),
-        [ResourceConstants.OUTPUTS.GraphQLAPIEndpointOutput]: this.makeAPIEndpointOutput(),
+        [ResourceConstants.OUTPUTS.GraphQLAPIEndpointOutput]:
+          this.makeAPIEndpointOutput(),
       },
       Conditions: {
         [ResourceConstants.CONDITIONS.ShouldUsePayPerRequestBilling]: Fn.Equals(
           Fn.Ref(ResourceConstants.PARAMETERS.DynamoDBBillingMode),
-          'PAY_PER_REQUEST',
+          "PAY_PER_REQUEST"
         ),
 
         [ResourceConstants.CONDITIONS.ShouldUsePointInTimeRecovery]: Fn.Equals(
-          Fn.Ref(ResourceConstants.PARAMETERS.DynamoDBEnablePointInTimeRecovery),
-          'true',
+          Fn.Ref(
+            ResourceConstants.PARAMETERS.DynamoDBEnablePointInTimeRecovery
+          ),
+          "true"
         ),
         [ResourceConstants.CONDITIONS.ShouldUseServerSideEncryption]: Fn.Equals(
-          Fn.Ref(ResourceConstants.PARAMETERS.DynamoDBEnableServerSideEncryption),
-          'true',
+          Fn.Ref(
+            ResourceConstants.PARAMETERS.DynamoDBEnableServerSideEncryption
+          ),
+          "true"
         ),
       },
     };
@@ -120,16 +141,22 @@ export class ResourceFactory {
     return new AppSync.GraphQLApi({
       Name: Fn.If(
         ResourceConstants.CONDITIONS.HasEnvironmentParameter,
-        Fn.Join('-', [Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiName), Fn.Ref(ResourceConstants.PARAMETERS.Env)]),
-        Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiName),
+        Fn.Join("-", [
+          Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiName),
+          Fn.Ref(ResourceConstants.PARAMETERS.Env),
+        ]),
+        Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiName)
       ),
-      AuthenticationType: 'API_KEY',
+      AuthenticationType: "API_KEY",
     });
   }
 
   public makeAppSyncSchema(schema: string) {
     return new AppSync.GraphQLSchema({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
       Definition: schema,
     });
   }
@@ -139,50 +166,71 @@ export class ResourceFactory {
    */
   public makeAPIIDOutput(): Output {
     return {
-      Description: 'Your GraphQL API ID.',
-      Value: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
+      Description: "Your GraphQL API ID.",
+      Value: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
       Export: {
-        Name: Fn.Join(':', [Refs.StackName, 'GraphQLApiId']),
+        Name: Fn.Join(":", [Refs.StackName, "GraphQLApiId"]),
       },
     };
   }
 
   public makeAPIEndpointOutput(): Output {
     return {
-      Description: 'Your GraphQL API endpoint.',
-      Value: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'GraphQLUrl'),
+      Description: "Your GraphQL API endpoint.",
+      Value: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "GraphQLUrl"
+      ),
       Export: {
-        Name: Fn.Join(':', [Refs.StackName, 'GraphQLApiEndpoint']),
+        Name: Fn.Join(":", [Refs.StackName, "GraphQLApiEndpoint"]),
       },
     };
   }
 
   public makeTableStreamArnOutput(resourceId: string): Output {
     return {
-      Description: 'Your DynamoDB table StreamArn.',
-      Value: Fn.GetAtt(resourceId, 'StreamArn'),
+      Description: "Your DynamoDB table StreamArn.",
+      Value: Fn.GetAtt(resourceId, "StreamArn"),
       Export: {
-        Name: Fn.Join(':', [Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiId), 'GetAtt', resourceId, 'StreamArn']),
+        Name: Fn.Join(":", [
+          Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiId),
+          "GetAtt",
+          resourceId,
+          "StreamArn",
+        ]),
       },
     };
   }
 
   public makeDataSourceOutput(resourceId: string): Output {
     return {
-      Description: 'Your model DataSource name.',
-      Value: Fn.GetAtt(resourceId, 'Name'),
+      Description: "Your model DataSource name.",
+      Value: Fn.GetAtt(resourceId, "Name"),
       Export: {
-        Name: Fn.Join(':', [Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiId), 'GetAtt', resourceId, 'Name']),
+        Name: Fn.Join(":", [
+          Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiId),
+          "GetAtt",
+          resourceId,
+          "Name",
+        ]),
       },
     };
   }
 
   public makeTableNameOutput(resourceId: string): Output {
     return {
-      Description: 'Your DynamoDB table name.',
+      Description: "Your DynamoDB table name.",
       Value: Fn.Ref(resourceId),
       Export: {
-        Name: Fn.Join(':', [Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiId), 'GetAtt', resourceId, 'Name']),
+        Name: Fn.Join(":", [
+          Fn.Ref(ResourceConstants.PARAMETERS.AppSyncApiId),
+          "GetAtt",
+          resourceId,
+          "Name",
+        ]),
       },
     };
   }
@@ -192,58 +240,74 @@ export class ResourceFactory {
    */
   public makeModelTable(
     typeName: string,
-    hashKey: string = 'id',
+    hashKey: string = "id",
     rangeKey?: string,
     deletionPolicy: DeletionPolicy = DeletionPolicy.Delete,
-    isSyncEnabled: boolean = false,
+    isSyncEnabled: boolean = false
   ) {
     const keySchema =
       hashKey && rangeKey
         ? [
             {
               AttributeName: hashKey,
-              KeyType: 'HASH',
+              KeyType: "HASH",
             },
             {
               AttributeName: rangeKey,
-              KeyType: 'RANGE',
+              KeyType: "RANGE",
             },
           ]
-        : [{ AttributeName: hashKey, KeyType: 'HASH' }];
+        : [{ AttributeName: hashKey, KeyType: "HASH" }];
     const attributeDefinitions =
       hashKey && rangeKey
         ? [
             {
               AttributeName: hashKey,
-              AttributeType: 'S',
+              AttributeType: "S",
             },
             {
               AttributeName: rangeKey,
-              AttributeType: 'S',
+              AttributeType: "S",
             },
           ]
-        : [{ AttributeName: hashKey, AttributeType: 'S' }];
+        : [{ AttributeName: hashKey, AttributeType: "S" }];
     return new DynamoDB.Table({
       TableName: this.dynamoDBTableName(typeName),
       KeySchema: keySchema,
       AttributeDefinitions: attributeDefinitions,
       StreamSpecification: {
-        StreamViewType: 'NEW_AND_OLD_IMAGES',
+        StreamViewType: "NEW_AND_OLD_IMAGES",
       },
-      BillingMode: Fn.If(ResourceConstants.CONDITIONS.ShouldUsePayPerRequestBilling, 'PAY_PER_REQUEST', Refs.NoValue),
-      ProvisionedThroughput: Fn.If(ResourceConstants.CONDITIONS.ShouldUsePayPerRequestBilling, Refs.NoValue, {
-        ReadCapacityUnits: Fn.Ref(ResourceConstants.PARAMETERS.DynamoDBModelTableReadIOPS),
-        WriteCapacityUnits: Fn.Ref(ResourceConstants.PARAMETERS.DynamoDBModelTableWriteIOPS),
-      }) as any,
+      BillingMode: Fn.If(
+        ResourceConstants.CONDITIONS.ShouldUsePayPerRequestBilling,
+        "PAY_PER_REQUEST",
+        Refs.NoValue
+      ),
+      ProvisionedThroughput: Fn.If(
+        ResourceConstants.CONDITIONS.ShouldUsePayPerRequestBilling,
+        Refs.NoValue,
+        {
+          ReadCapacityUnits: Fn.Ref(
+            ResourceConstants.PARAMETERS.DynamoDBModelTableReadIOPS
+          ),
+          WriteCapacityUnits: Fn.Ref(
+            ResourceConstants.PARAMETERS.DynamoDBModelTableWriteIOPS
+          ),
+        }
+      ) as any,
       SSESpecification: {
-        SSEEnabled: Fn.If(ResourceConstants.CONDITIONS.ShouldUseServerSideEncryption, true, false),
+        SSEEnabled: Fn.If(
+          ResourceConstants.CONDITIONS.ShouldUseServerSideEncryption,
+          true,
+          false
+        ),
       },
       PointInTimeRecoverySpecification: Fn.If(
         ResourceConstants.CONDITIONS.ShouldUsePointInTimeRecovery,
         {
           PointInTimeRecoveryEnabled: true,
         },
-        Refs.NoValue,
+        Refs.NoValue
       ) as any,
       ...(isSyncEnabled && {
         TimeToLiveSpecification: SyncUtils.syncTTLConfig(),
@@ -254,12 +318,15 @@ export class ResourceFactory {
   private dynamoDBTableName(typeName: string): IntrinsicFunction {
     return Fn.If(
       ResourceConstants.CONDITIONS.HasEnvironmentParameter,
-      Fn.Join('-', [
+      Fn.Join("-", [
         typeName,
-        Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
+        Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, "ApiId"),
         Fn.Ref(ResourceConstants.PARAMETERS.Env),
       ]),
-      Fn.Join('-', [typeName, Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId')]),
+      Fn.Join("-", [
+        typeName,
+        Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, "ApiId"),
+      ])
     );
   }
 
@@ -272,85 +339,115 @@ export class ResourceFactory {
     return new IAM.Role({
       RoleName: Fn.If(
         ResourceConstants.CONDITIONS.HasEnvironmentParameter,
-        Fn.Join('-', [
+        Fn.Join("-", [
           typeName.slice(0, 14) + md5(typeName).slice(15, 21), // max of 64. 64-10-26-4-3 = 21
-          'role', // 4
-          Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'), // 26
+          "role", // 4
+          Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, "ApiId"), // 26
           Fn.Ref(ResourceConstants.PARAMETERS.Env), // 10
         ]),
-        Fn.Join('-', [
+        Fn.Join("-", [
           typeName.slice(0, 24) + md5(typeName).slice(25, 31), // max of 64. 64-26-4-3 = 31
-          'role',
-          Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-        ]),
+          "role",
+          Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, "ApiId"),
+        ])
       ),
       AssumeRolePolicyDocument: {
-        Version: '2012-10-17',
+        Version: "2012-10-17",
         Statement: [
           {
-            Effect: 'Allow',
+            Effect: "Allow",
             Principal: {
-              Service: 'appsync.amazonaws.com',
+              Service: "appsync.amazonaws.com",
             },
-            Action: 'sts:AssumeRole',
+            Action: "sts:AssumeRole",
           },
         ],
       },
       Policies: [
         new IAM.Role.Policy({
-          PolicyName: 'DynamoDBAccess',
+          PolicyName: "DynamoDBAccess",
           PolicyDocument: {
-            Version: '2012-10-17',
+            Version: "2012-10-17",
             Statement: [
               {
-                Effect: 'Allow',
+                Effect: "Allow",
                 Action: [
-                  'dynamodb:BatchGetItem',
-                  'dynamodb:BatchWriteItem',
-                  'dynamodb:PutItem',
-                  'dynamodb:DeleteItem',
-                  'dynamodb:GetItem',
-                  'dynamodb:Scan',
-                  'dynamodb:Query',
-                  'dynamodb:UpdateItem',
+                  "dynamodb:BatchGetItem",
+                  "dynamodb:BatchWriteItem",
+                  "dynamodb:PutItem",
+                  "dynamodb:DeleteItem",
+                  "dynamodb:GetItem",
+                  "dynamodb:Scan",
+                  "dynamodb:Query",
+                  "dynamodb:UpdateItem",
                 ],
                 Resource: [
-                  Fn.Sub('arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}', {
-                    tablename: this.dynamoDBTableName(typeName),
-                  }),
-                  Fn.Sub('arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}/*', {
-                    tablename: this.dynamoDBTableName(typeName),
-                  }),
+                  Fn.Sub(
+                    "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}",
+                    {
+                      tablename: this.dynamoDBTableName(typeName),
+                    }
+                  ),
+                  Fn.Sub(
+                    "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}/*",
+                    {
+                      tablename: this.dynamoDBTableName(typeName),
+                    }
+                  ),
                   ...(syncConfig
                     ? [
-                        Fn.Sub('arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}', {
-                          tablename: Fn.If(
-                            ResourceConstants.CONDITIONS.HasEnvironmentParameter,
-                            Fn.Join('-', [
-                              SyncResourceIDs.syncTableName,
-                              Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-                              Fn.Ref(ResourceConstants.PARAMETERS.Env),
-                            ]),
-                            Fn.Join('-', [
-                              SyncResourceIDs.syncTableName,
-                              Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-                            ]),
-                          ),
-                        }),
-                        Fn.Sub('arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}/*', {
-                          tablename: Fn.If(
-                            ResourceConstants.CONDITIONS.HasEnvironmentParameter,
-                            Fn.Join('-', [
-                              SyncResourceIDs.syncTableName,
-                              Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-                              Fn.Ref(ResourceConstants.PARAMETERS.Env),
-                            ]),
-                            Fn.Join('-', [
-                              SyncResourceIDs.syncTableName,
-                              Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-                            ]),
-                          ),
-                        }),
+                        Fn.Sub(
+                          "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}",
+                          {
+                            tablename: Fn.If(
+                              ResourceConstants.CONDITIONS
+                                .HasEnvironmentParameter,
+                              Fn.Join("-", [
+                                SyncResourceIDs.syncTableName,
+                                Fn.GetAtt(
+                                  ResourceConstants.RESOURCES
+                                    .GraphQLAPILogicalID,
+                                  "ApiId"
+                                ),
+                                Fn.Ref(ResourceConstants.PARAMETERS.Env),
+                              ]),
+                              Fn.Join("-", [
+                                SyncResourceIDs.syncTableName,
+                                Fn.GetAtt(
+                                  ResourceConstants.RESOURCES
+                                    .GraphQLAPILogicalID,
+                                  "ApiId"
+                                ),
+                              ])
+                            ),
+                          }
+                        ),
+                        Fn.Sub(
+                          "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${tablename}/*",
+                          {
+                            tablename: Fn.If(
+                              ResourceConstants.CONDITIONS
+                                .HasEnvironmentParameter,
+                              Fn.Join("-", [
+                                SyncResourceIDs.syncTableName,
+                                Fn.GetAtt(
+                                  ResourceConstants.RESOURCES
+                                    .GraphQLAPILogicalID,
+                                  "ApiId"
+                                ),
+                                Fn.Ref(ResourceConstants.PARAMETERS.Env),
+                              ]),
+                              Fn.Join("-", [
+                                SyncResourceIDs.syncTableName,
+                                Fn.GetAtt(
+                                  ResourceConstants.RESOURCES
+                                    .GraphQLAPILogicalID,
+                                  "ApiId"
+                                ),
+                              ])
+                            ),
+                          }
+                        ),
                       ]
                     : []),
                 ],
@@ -359,7 +456,11 @@ export class ResourceFactory {
           },
         }),
         ...(syncConfig && SyncUtils.isLambdaSyncConfig(syncConfig)
-          ? [SyncUtils.createSyncLambdaIAMPolicy(syncConfig.LambdaConflictHandler)]
+          ? [
+              SyncUtils.createSyncLambdaIAMPolicy(
+                syncConfig.LambdaConflictHandler
+              ),
+            ]
           : []),
       ],
     });
@@ -369,12 +470,20 @@ export class ResourceFactory {
    * Given the name of a data source and optional logical id return a CF
    * spec for a data source pointing to the dynamodb table.
    */
-  public makeDynamoDBDataSource(tableId: string, iamRoleLogicalID: string, typeName: string, isSyncEnabled: boolean = false) {
+  public makeDynamoDBDataSource(
+    tableId: string,
+    iamRoleLogicalID: string,
+    typeName: string,
+    isSyncEnabled: boolean = false
+  ) {
     return new AppSync.DataSource({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
       Name: tableId,
-      Type: 'AMAZON_DYNAMODB',
-      ServiceRoleArn: Fn.GetAtt(iamRoleLogicalID, 'Arn'),
+      Type: "AMAZON_DYNAMODB",
+      ServiceRoleArn: Fn.GetAtt(iamRoleLogicalID, "Arn"),
       DynamoDBConfig: {
         AwsRegion: Refs.Region,
         TableName: this.dynamoDBTableName(typeName),
@@ -390,74 +499,120 @@ export class ResourceFactory {
    * Create a resolver that creates an item in DynamoDB.
    * @param type
    */
-  public makeCreateResolver({ type, nameOverride, syncConfig, mutationTypeName = 'Mutation' }: MutationResolverInput) {
-    const fieldName = nameOverride ? nameOverride : graphqlName('create' + toUpper(type));
+  public makeCreateResolver({
+    type,
+    nameOverride,
+    syncConfig,
+    mutationTypeName = "Mutation",
+  }: MutationResolverInput) {
+    const fieldName = nameOverride
+      ? nameOverride
+      : graphqlName("create" + toUpper(type));
     const isSyncEnabled = syncConfig ? true : false;
     return new AppSync.Resolver({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-      DataSourceName: Fn.GetAtt(ModelResourceIDs.ModelTableDataSourceID(type), 'Name'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
+      DataSourceName: Fn.GetAtt(
+        ModelResourceIDs.ModelTableDataSourceID(type),
+        "Name"
+      ),
       FieldName: fieldName,
       TypeName: mutationTypeName,
-      RequestMappingTemplate: printBlock('Prepare DynamoDB PutItem Request')(
+      RequestMappingTemplate: printBlock("Prepare DynamoDB PutItem Request")(
         compoundExpression([
           qref(`$context.args.input.put("__typename", "${type}")`),
-          this.addDefaultConditionExpression('create'),
+          this.addDefaultConditionExpression("create"),
           iff(
-            ref('context.args.condition'),
+            ref("context.args.condition"),
             compoundExpression([
-              set(ref('condition.expressionValues'), obj({})),
+              set(ref("condition.expressionValues"), obj({})),
               set(
-                ref('conditionFilterExpressions'),
-                raw('$util.parseJson($util.transform.toDynamoDBConditionExpression($context.args.condition))'),
+                ref("conditionFilterExpressions"),
+                raw(
+                  "$util.parseJson($util.transform.toDynamoDBConditionExpression($context.args.condition))"
+                )
               ),
               // tslint:disable-next-line
-              qref(`$condition.put("expression", "($condition.expression) AND $conditionFilterExpressions.expression")`),
-              qref(`$condition.expressionNames.putAll($conditionFilterExpressions.expressionNames)`),
-              qref(`$condition.expressionValues.putAll($conditionFilterExpressions.expressionValues)`),
-            ]),
+              qref(
+                `$condition.put("expression", "($condition.expression) AND $conditionFilterExpressions.expression")`
+              ),
+              qref(
+                `$condition.expressionNames.putAll($conditionFilterExpressions.expressionNames)`
+              ),
+              qref(
+                `$condition.expressionValues.putAll($conditionFilterExpressions.expressionValues)`
+              ),
+            ])
           ),
           iff(
-            and([ref('condition.expressionValues'), raw('$condition.expressionValues.size() == 0')]),
+            and([
+              ref("condition.expressionValues"),
+              raw("$condition.expressionValues.size() == 0"),
+            ]),
             set(
-              ref('condition'),
+              ref("condition"),
               obj({
-                expression: ref('condition.expression'),
-                expressionNames: ref('condition.expressionNames'),
-              }),
-            ),
+                expression: ref("condition.expression"),
+                expressionNames: ref("condition.expressionNames"),
+              })
+            )
           ),
           DynamoDBMappingTemplate.putItem({
             key: ifElse(
               ref(ResourceConstants.SNIPPETS.ModelObjectKey),
-              raw(`$util.toJson(\$${ResourceConstants.SNIPPETS.ModelObjectKey})`),
+              raw(
+                `$util.toJson(\$${ResourceConstants.SNIPPETS.ModelObjectKey})`
+              ),
               obj({
                 id: raw(`$util.dynamodb.toDynamoDBJson($ctx.args.input.id)`),
               }),
-              true,
+              true
             ),
-            attributeValues: ref('util.dynamodb.toMapValuesJson($context.args.input)'),
-            condition: ref('util.toJson($condition)'),
+            attributeValues: ref(
+              "util.dynamodb.toMapValuesJson($context.args.input)"
+            ),
+            condition: ref("util.toJson($condition)"),
           }),
-        ]),
+        ])
       ),
-      ResponseMappingTemplate: print(DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)),
-      ...(syncConfig && { SyncConfig: SyncUtils.syncResolverConfig(syncConfig) }),
+      ResponseMappingTemplate: print(
+        DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)
+      ),
+      ...(syncConfig && {
+        SyncConfig: SyncUtils.syncResolverConfig(syncConfig),
+      }),
     });
   }
 
-  public initalizeDefaultInputForCreateMutation(input: InputObjectTypeDefinitionNode, timestamps): string {
-    const hasDefaultIdField = input.fields?.find(field => field.name.value === 'id' && ['ID', 'String'].includes(getBaseType(field.type)));
-    return printBlock('Set default values')(
+  public initalizeDefaultInputForCreateMutation(
+    input: InputObjectTypeDefinitionNode,
+    timestamps
+  ): string {
+    const hasDefaultIdField = input.fields?.find(
+      (field) =>
+        field.name.value === "id" &&
+        ["ID", "String"].includes(getBaseType(field.type))
+    );
+    return printBlock("Set default values")(
       compoundExpression([
-        ...(hasDefaultIdField ? [qref(`$context.args.input.put("id", $util.defaultIfNull($ctx.args.input.id, $util.autoId()))`)] : []),
-        ...(timestamps && (timestamps.createdAtField || timestamps.updatedAtField)
-          ? [set(ref('createdAt'), ref('util.time.nowISO8601()'))]
+        ...(hasDefaultIdField
+          ? [
+              qref(
+                `$context.args.input.put("id", $util.defaultIfNull($ctx.args.input.id, $util.autoId()))`
+              ),
+            ]
+          : []),
+        ...(timestamps &&
+        (timestamps.createdAtField || timestamps.updatedAtField)
+          ? [set(ref("createdAt"), ref("util.time.nowISO8601()"))]
           : []),
         ...(timestamps && timestamps.createdAtField
           ? [
               comment(`Automatically set the createdAt timestamp.`),
               qref(
-                `$context.args.input.put("${timestamps.createdAtField}", $util.defaultIfNull($ctx.args.input.${timestamps.createdAtField}, $createdAt))`,
+                `$context.args.input.put("${timestamps.createdAtField}", $util.defaultIfNull($ctx.args.input.${timestamps.createdAtField}, $createdAt))`
               ),
             ]
           : []),
@@ -465,11 +620,11 @@ export class ResourceFactory {
           ? [
               comment(`Automatically set the updatedAt timestamp.`),
               qref(
-                `$context.args.input.put("${timestamps.updatedAtField}", $util.defaultIfNull($ctx.args.input.${timestamps.updatedAtField}, $createdAt))`,
+                `$context.args.input.put("${timestamps.updatedAtField}", $util.defaultIfNull($ctx.args.input.${timestamps.updatedAtField}, $createdAt))`
               ),
             ]
           : []),
-      ]),
+      ])
     );
   }
 
@@ -477,109 +632,169 @@ export class ResourceFactory {
     type,
     nameOverride,
     syncConfig,
-    mutationTypeName = 'Mutation',
+    mutationTypeName = "Mutation",
     timestamps,
     optionalNonNullableFields,
   }: MutationUpdateResolverInput) {
-    const fieldName = nameOverride ? nameOverride : graphqlName(`update` + toUpper(type));
+    const fieldName = nameOverride
+      ? nameOverride
+      : graphqlName(`update` + toUpper(type));
     const isSyncEnabled = syncConfig ? true : false;
-    const optionalNonNullableExpression: Expression[] = optionalNonNullableFields.map(str);
+    const optionalNonNullableExpression: Expression[] =
+      optionalNonNullableFields.map(str);
 
     return new AppSync.Resolver({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-      DataSourceName: Fn.GetAtt(ModelResourceIDs.ModelTableDataSourceID(type), 'Name'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
+      DataSourceName: Fn.GetAtt(
+        ModelResourceIDs.ModelTableDataSourceID(type),
+        "Name"
+      ),
       FieldName: fieldName,
       TypeName: mutationTypeName,
       RequestMappingTemplate: print(
         compoundExpression([
-          set(ref('optionalNonNullableFields'), list(optionalNonNullableExpression)),
-          forEach(ref('field'), ref('optionalNonNullableFields'), [
+          set(
+            ref("optionalNonNullableFields"),
+            list(optionalNonNullableExpression)
+          ),
+          forEach(ref("field"), ref("optionalNonNullableFields"), [
             iff(
-              and([ref('context.arguments.input.keySet().contains($field)'), ref('util.isNull($context.args.input.get($field))')]),
-              ref('util.error("An argument you marked as Non-Null is set to Null in the query or the body of your request.")'),
+              and([
+                ref("context.arguments.input.keySet().contains($field)"),
+                ref("util.isNull($context.args.input.get($field))"),
+              ]),
+              ref(
+                'util.error("An argument you marked as Non-Null is set to Null in the query or the body of your request.")'
+              )
             ),
           ]),
 
           ifElse(
-            raw(`$${ResourceConstants.SNIPPETS.AuthCondition} && $${ResourceConstants.SNIPPETS.AuthCondition}.expression != ""`),
+            raw(
+              `$${ResourceConstants.SNIPPETS.AuthCondition} && $${ResourceConstants.SNIPPETS.AuthCondition}.expression != ""`
+            ),
             compoundExpression([
-              set(ref('condition'), ref(ResourceConstants.SNIPPETS.AuthCondition)),
+              set(
+                ref("condition"),
+                ref(ResourceConstants.SNIPPETS.AuthCondition)
+              ),
               ifElse(
                 ref(ResourceConstants.SNIPPETS.ModelObjectKey),
-                forEach(ref('entry'), ref(`${ResourceConstants.SNIPPETS.ModelObjectKey}.entrySet()`), [
-                  qref('$condition.put("expression", "$condition.expression AND attribute_exists(#keyCondition$velocityCount)")'),
-                  qref('$condition.expressionNames.put("#keyCondition$velocityCount", "$entry.key")'),
-                ]),
+                forEach(
+                  ref("entry"),
+                  ref(
+                    `${ResourceConstants.SNIPPETS.ModelObjectKey}.entrySet()`
+                  ),
+                  [
+                    qref(
+                      '$condition.put("expression", "$condition.expression AND attribute_exists(#keyCondition$velocityCount)")'
+                    ),
+                    qref(
+                      '$condition.expressionNames.put("#keyCondition$velocityCount", "$entry.key")'
+                    ),
+                  ]
+                ),
                 compoundExpression([
-                  qref('$condition.put("expression", "$condition.expression AND attribute_exists(#id)")'),
+                  qref(
+                    '$condition.put("expression", "$condition.expression AND attribute_exists(#id)")'
+                  ),
                   qref('$condition.expressionNames.put("#id", "id")'),
-                ]),
+                ])
               ),
             ]),
-            this.addDefaultConditionExpression('update'),
+            this.addDefaultConditionExpression("update")
           ),
           ...(timestamps && timestamps.updatedAtField
             ? [
                 comment(`Automatically set the updatedAt timestamp.`),
                 qref(
-                  `$context.args.input.put("${timestamps.updatedAtField}", $util.defaultIfNull($ctx.args.input.${timestamps.updatedAtField}, $util.time.nowISO8601()))`,
+                  `$context.args.input.put("${timestamps.updatedAtField}", $util.defaultIfNull($ctx.args.input.${timestamps.updatedAtField}, $util.time.nowISO8601()))`
                 ),
               ]
             : []),
           qref(`$context.args.input.put("__typename", "${type}")`),
-          comment('Update condition if type is @versioned'),
+          comment("Update condition if type is @versioned"),
           iff(
             ref(ResourceConstants.SNIPPETS.VersionedCondition),
             compoundExpression([
               // tslint:disable-next-line
               qref(
-                `$condition.put("expression", "($condition.expression) AND $${ResourceConstants.SNIPPETS.VersionedCondition}.expression")`,
+                `$condition.put("expression", "($condition.expression) AND $${ResourceConstants.SNIPPETS.VersionedCondition}.expression")`
               ),
-              qref(`$condition.expressionNames.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionNames)`),
-              qref(`$condition.expressionValues.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionValues)`),
-            ]),
+              qref(
+                `$condition.expressionNames.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionNames)`
+              ),
+              qref(
+                `$condition.expressionValues.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionValues)`
+              ),
+            ])
           ),
           iff(
-            ref('context.args.condition'),
+            ref("context.args.condition"),
             compoundExpression([
               set(
-                ref('conditionFilterExpressions'),
-                raw('$util.parseJson($util.transform.toDynamoDBConditionExpression($context.args.condition))'),
+                ref("conditionFilterExpressions"),
+                raw(
+                  "$util.parseJson($util.transform.toDynamoDBConditionExpression($context.args.condition))"
+                )
               ),
               // tslint:disable-next-line
-              qref(`$condition.put("expression", "($condition.expression) AND $conditionFilterExpressions.expression")`),
-              qref(`$condition.expressionNames.putAll($conditionFilterExpressions.expressionNames)`),
-              qref(`$condition.expressionValues.putAll($conditionFilterExpressions.expressionValues)`),
-            ]),
+              qref(
+                `$condition.put("expression", "($condition.expression) AND $conditionFilterExpressions.expression")`
+              ),
+              qref(
+                `$condition.expressionNames.putAll($conditionFilterExpressions.expressionNames)`
+              ),
+              qref(
+                `$condition.expressionValues.putAll($conditionFilterExpressions.expressionValues)`
+              ),
+            ])
           ),
           iff(
-            and([ref('condition.expressionValues'), raw('$condition.expressionValues.size() == 0')]),
+            and([
+              ref("condition.expressionValues"),
+              raw("$condition.expressionValues.size() == 0"),
+            ]),
             set(
-              ref('condition'),
+              ref("condition"),
               obj({
-                expression: ref('condition.expression'),
-                expressionNames: ref('condition.expressionNames'),
-              }),
-            ),
+                expression: ref("condition.expression"),
+                expressionNames: ref("condition.expressionNames"),
+              })
+            )
+          ),
+          comment(`Hello from MB2!`),
+          set(
+            ref("optionalNonNullableFields"),
+            list(optionalNonNullableExpression)
           ),
           DynamoDBMappingTemplate.updateItem({
             key: ifElse(
               ref(ResourceConstants.SNIPPETS.ModelObjectKey),
-              raw(`$util.toJson(\$${ResourceConstants.SNIPPETS.ModelObjectKey})`),
+              raw(
+                `$util.toJson(\$${ResourceConstants.SNIPPETS.ModelObjectKey})`
+              ),
               obj({
-                id: obj({ S: ref('util.toJson($context.args.input.id)') }),
+                id: obj({ S: ref("util.toJson($context.args.input.id)") }),
               }),
-              true,
+              true
             ),
-            condition: ref('util.toJson($condition)'),
+            condition: ref("util.toJson($condition)"),
             objectKeyVariable: ResourceConstants.SNIPPETS.ModelObjectKey,
             nameOverrideMap: ResourceConstants.SNIPPETS.DynamoDBNameOverrideMap,
             isSyncEnabled,
           }),
-        ]),
+        ])
       ),
-      ResponseMappingTemplate: print(DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)),
-      ...(syncConfig && { SyncConfig: SyncUtils.syncResolverConfig(syncConfig) }),
+      ResponseMappingTemplate: print(
+        DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)
+      ),
+      ...(syncConfig && {
+        SyncConfig: SyncUtils.syncResolverConfig(syncConfig),
+      }),
     });
   }
 
@@ -587,11 +802,24 @@ export class ResourceFactory {
    * Create a resolver that creates an item in DynamoDB.
    * @param type
    */
-  public makeGetResolver(type: string, nameOverride?: string, isSyncEnabled: boolean = false, queryTypeName: string = 'Query') {
-    const fieldName = nameOverride ? nameOverride : graphqlName('get' + toUpper(type));
+  public makeGetResolver(
+    type: string,
+    nameOverride?: string,
+    isSyncEnabled: boolean = false,
+    queryTypeName: string = "Query"
+  ) {
+    const fieldName = nameOverride
+      ? nameOverride
+      : graphqlName("get" + toUpper(type));
     return new AppSync.Resolver({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-      DataSourceName: Fn.GetAtt(ModelResourceIDs.ModelTableDataSourceID(type), 'Name'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
+      DataSourceName: Fn.GetAtt(
+        ModelResourceIDs.ModelTableDataSourceID(type),
+        "Name"
+      ),
       FieldName: fieldName,
       TypeName: queryTypeName,
       RequestMappingTemplate: print(
@@ -600,14 +828,16 @@ export class ResourceFactory {
             ref(ResourceConstants.SNIPPETS.ModelObjectKey),
             raw(`$util.toJson(\$${ResourceConstants.SNIPPETS.ModelObjectKey})`),
             obj({
-              id: ref('util.dynamodb.toDynamoDBJson($ctx.args.id)'),
+              id: ref("util.dynamodb.toDynamoDBJson($ctx.args.id)"),
             }),
-            true,
+            true
           ),
           isSyncEnabled,
-        }),
+        })
       ),
-      ResponseMappingTemplate: print(DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)),
+      ResponseMappingTemplate: print(
+        DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)
+      ),
     });
   }
 
@@ -615,22 +845,40 @@ export class ResourceFactory {
    * Create a resolver that syncs local storage with cloud storage
    * @param type
    */
-  public makeSyncResolver(type: string, queryTypeName: string = 'Query') {
-    const fieldName = graphqlName('sync' + toUpper(plural(type)));
+  public makeSyncResolver(type: string, queryTypeName: string = "Query") {
+    const fieldName = graphqlName("sync" + toUpper(plural(type)));
     return new AppSync.Resolver({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-      DataSourceName: Fn.GetAtt(ModelResourceIDs.ModelTableDataSourceID(type), 'Name'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
+      DataSourceName: Fn.GetAtt(
+        ModelResourceIDs.ModelTableDataSourceID(type),
+        "Name"
+      ),
       FieldName: fieldName,
       TypeName: queryTypeName,
       RequestMappingTemplate: print(
         DynamoDBMappingTemplate.syncItem({
-          filter: ifElse(ref('context.args.filter'), ref('util.transform.toDynamoDBFilterExpression($ctx.args.filter)'), nul()),
-          limit: ref(`util.defaultIfNull($ctx.args.limit, ${ResourceConstants.DEFAULT_SYNC_QUERY_PAGE_LIMIT})`),
-          lastSync: ref('util.toJson($util.defaultIfNull($ctx.args.lastSync, null))'),
-          nextToken: ref('util.toJson($util.defaultIfNull($ctx.args.nextToken, null))'),
-        }),
+          filter: ifElse(
+            ref("context.args.filter"),
+            ref("util.transform.toDynamoDBFilterExpression($ctx.args.filter)"),
+            nul()
+          ),
+          limit: ref(
+            `util.defaultIfNull($ctx.args.limit, ${ResourceConstants.DEFAULT_SYNC_QUERY_PAGE_LIMIT})`
+          ),
+          lastSync: ref(
+            "util.toJson($util.defaultIfNull($ctx.args.lastSync, null))"
+          ),
+          nextToken: ref(
+            "util.toJson($util.defaultIfNull($ctx.args.nextToken, null))"
+          ),
+        })
       ),
-      ResponseMappingTemplate: print(DynamoDBMappingTemplate.dynamoDBResponse(true)),
+      ResponseMappingTemplate: print(
+        DynamoDBMappingTemplate.dynamoDBResponse(true)
+      ),
     });
   }
 
@@ -638,44 +886,79 @@ export class ResourceFactory {
    * Create a resolver that queries an item in DynamoDB.
    * @param type
    */
-  public makeQueryResolver(type: string, nameOverride?: string, isSyncEnabled: boolean = false, queryTypeName: string = 'Query') {
-    const fieldName = nameOverride ? nameOverride : graphqlName(`query${toUpper(type)}`);
+  public makeQueryResolver(
+    type: string,
+    nameOverride?: string,
+    isSyncEnabled: boolean = false,
+    queryTypeName: string = "Query"
+  ) {
+    const fieldName = nameOverride
+      ? nameOverride
+      : graphqlName(`query${toUpper(type)}`);
     return new AppSync.Resolver({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-      DataSourceName: Fn.GetAtt(ModelResourceIDs.ModelTableDataSourceID(type), 'Name'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
+      DataSourceName: Fn.GetAtt(
+        ModelResourceIDs.ModelTableDataSourceID(type),
+        "Name"
+      ),
       FieldName: fieldName,
       TypeName: queryTypeName,
       RequestMappingTemplate: print(
         compoundExpression([
-          set(ref('limit'), ref(`util.defaultIfNull($context.args.limit, ${ResourceConstants.DEFAULT_PAGE_LIMIT})`)),
+          set(
+            ref("limit"),
+            ref(
+              `util.defaultIfNull($context.args.limit, ${ResourceConstants.DEFAULT_PAGE_LIMIT})`
+            )
+          ),
           DynamoDBMappingTemplate.query({
             query: obj({
-              expression: str('#typename = :typename'),
+              expression: str("#typename = :typename"),
               expressionNames: obj({
-                '#typename': str('__typename'),
+                "#typename": str("__typename"),
               }),
               expressionValues: obj({
-                ':typename': obj({
+                ":typename": obj({
                   S: str(type),
                 }),
               }),
             }),
             scanIndexForward: ifElse(
-              ref('context.args.sortDirection'),
-              ifElse(equals(ref('context.args.sortDirection'), str('ASC')), bool(true), bool(false)),
-              bool(true),
+              ref("context.args.sortDirection"),
+              ifElse(
+                equals(ref("context.args.sortDirection"), str("ASC")),
+                bool(true),
+                bool(false)
+              ),
+              bool(true)
             ),
-            filter: ifElse(ref('context.args.filter'), ref('util.transform.toDynamoDBFilterExpression($ctx.args.filter)'), nul()),
-            limit: ref('limit'),
-            nextToken: ifElse(ref('context.args.nextToken'), ref('util.toJson($context.args.nextToken)'), nul()),
+            filter: ifElse(
+              ref("context.args.filter"),
+              ref(
+                "util.transform.toDynamoDBFilterExpression($ctx.args.filter)"
+              ),
+              nul()
+            ),
+            limit: ref("limit"),
+            nextToken: ifElse(
+              ref("context.args.nextToken"),
+              ref("util.toJson($context.args.nextToken)"),
+              nul()
+            ),
           }),
-        ]),
+        ])
       ),
       ResponseMappingTemplate: print(
         DynamoDBMappingTemplate.dynamoDBResponse(
           isSyncEnabled,
-          compoundExpression([iff(raw('!$result'), set(ref('result'), ref('ctx.result'))), raw('$util.toJson($result)')]),
-        ),
+          compoundExpression([
+            iff(raw("!$result"), set(ref("result"), ref("ctx.result"))),
+            raw("$util.toJson($result)"),
+          ])
+        )
       ),
     });
   }
@@ -690,48 +973,78 @@ export class ResourceFactory {
     improvePluralization: boolean,
     nameOverride?: string,
     isSyncEnabled: boolean = false,
-    queryTypeName: string = 'Query',
+    queryTypeName: string = "Query"
   ) {
-    const fieldName = nameOverride ? nameOverride : graphqlName('list' + plurality(toUpper(type), improvePluralization));
-    const requestVariable = 'ListRequest';
+    const fieldName = nameOverride
+      ? nameOverride
+      : graphqlName("list" + plurality(toUpper(type), improvePluralization));
+    const requestVariable = "ListRequest";
     return new AppSync.Resolver({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-      DataSourceName: Fn.GetAtt(ModelResourceIDs.ModelTableDataSourceID(type), 'Name'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
+      DataSourceName: Fn.GetAtt(
+        ModelResourceIDs.ModelTableDataSourceID(type),
+        "Name"
+      ),
       FieldName: fieldName,
       TypeName: queryTypeName,
       RequestMappingTemplate: print(
         compoundExpression([
-          set(ref('limit'), ref(`util.defaultIfNull($context.args.limit, ${ResourceConstants.DEFAULT_PAGE_LIMIT})`)),
+          set(
+            ref("limit"),
+            ref(
+              `util.defaultIfNull($context.args.limit, ${ResourceConstants.DEFAULT_PAGE_LIMIT})`
+            )
+          ),
           set(
             ref(requestVariable),
             obj({
               version: str(RESOLVER_VERSION_ID),
-              limit: ref('limit'),
-            }),
+              limit: ref("limit"),
+            })
           ),
-          iff(ref('context.args.nextToken'), set(ref(`${requestVariable}.nextToken`), ref('context.args.nextToken'))),
           iff(
-            ref('context.args.filter'),
-            set(ref(`${requestVariable}.filter`), ref('util.parseJson("$util.transform.toDynamoDBFilterExpression($ctx.args.filter)")')),
+            ref("context.args.nextToken"),
+            set(
+              ref(`${requestVariable}.nextToken`),
+              ref("context.args.nextToken")
+            )
+          ),
+          iff(
+            ref("context.args.filter"),
+            set(
+              ref(`${requestVariable}.filter`),
+              ref(
+                'util.parseJson("$util.transform.toDynamoDBFilterExpression($ctx.args.filter)")'
+              )
+            )
           ),
           ifElse(
             raw(`!$util.isNull($${ResourceConstants.SNIPPETS.ModelQueryExpression})
                         && !$util.isNullOrEmpty($${ResourceConstants.SNIPPETS.ModelQueryExpression}.expression)`),
             compoundExpression([
               qref(`$${requestVariable}.put("operation", "Query")`),
-              qref(`$${requestVariable}.put("query", $${ResourceConstants.SNIPPETS.ModelQueryExpression})`),
+              qref(
+                `$${requestVariable}.put("query", $${ResourceConstants.SNIPPETS.ModelQueryExpression})`
+              ),
               ifElse(
-                raw(`!$util.isNull($ctx.args.sortDirection) && $ctx.args.sortDirection == "DESC"`),
+                raw(
+                  `!$util.isNull($ctx.args.sortDirection) && $ctx.args.sortDirection == "DESC"`
+                ),
                 set(ref(`${requestVariable}.scanIndexForward`), bool(false)),
-                set(ref(`${requestVariable}.scanIndexForward`), bool(true)),
+                set(ref(`${requestVariable}.scanIndexForward`), bool(true))
               ),
             ]),
-            qref(`$${requestVariable}.put("operation", "Scan")`),
+            qref(`$${requestVariable}.put("operation", "Scan")`)
           ),
           raw(`$util.toJson($${requestVariable})`),
-        ]),
+        ])
       ),
-      ResponseMappingTemplate: print(DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)),
+      ResponseMappingTemplate: print(
+        DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)
+      ),
     });
   }
 
@@ -740,12 +1053,25 @@ export class ResourceFactory {
    * @param type The name of the type to delete an item of.
    * @param nameOverride A user provided override for the field name.
    */
-  public makeDeleteResolver({ type, nameOverride, syncConfig, mutationTypeName = 'Mutation' }: MutationResolverInput) {
-    const fieldName = nameOverride ? nameOverride : graphqlName('delete' + toUpper(type));
+  public makeDeleteResolver({
+    type,
+    nameOverride,
+    syncConfig,
+    mutationTypeName = "Mutation",
+  }: MutationResolverInput) {
+    const fieldName = nameOverride
+      ? nameOverride
+      : graphqlName("delete" + toUpper(type));
     const isSyncEnabled = syncConfig ? true : false;
     return new AppSync.Resolver({
-      ApiId: Fn.GetAtt(ResourceConstants.RESOURCES.GraphQLAPILogicalID, 'ApiId'),
-      DataSourceName: Fn.GetAtt(ModelResourceIDs.ModelTableDataSourceID(type), 'Name'),
+      ApiId: Fn.GetAtt(
+        ResourceConstants.RESOURCES.GraphQLAPILogicalID,
+        "ApiId"
+      ),
+      DataSourceName: Fn.GetAtt(
+        ModelResourceIDs.ModelTableDataSourceID(type),
+        "Name"
+      ),
       FieldName: fieldName,
       TypeName: mutationTypeName,
       RequestMappingTemplate: print(
@@ -753,76 +1079,123 @@ export class ResourceFactory {
           ifElse(
             ref(ResourceConstants.SNIPPETS.AuthCondition),
             compoundExpression([
-              set(ref('condition'), ref(ResourceConstants.SNIPPETS.AuthCondition)),
+              set(
+                ref("condition"),
+                ref(ResourceConstants.SNIPPETS.AuthCondition)
+              ),
               ifElse(
                 ref(ResourceConstants.SNIPPETS.ModelObjectKey),
-                forEach(ref('entry'), ref(`${ResourceConstants.SNIPPETS.ModelObjectKey}.entrySet()`), [
-                  qref('$condition.put("expression", "$condition.expression AND attribute_exists(#keyCondition$velocityCount)")'),
-                  qref('$condition.expressionNames.put("#keyCondition$velocityCount", "$entry.key")'),
-                ]),
+                forEach(
+                  ref("entry"),
+                  ref(
+                    `${ResourceConstants.SNIPPETS.ModelObjectKey}.entrySet()`
+                  ),
+                  [
+                    qref(
+                      '$condition.put("expression", "$condition.expression AND attribute_exists(#keyCondition$velocityCount)")'
+                    ),
+                    qref(
+                      '$condition.expressionNames.put("#keyCondition$velocityCount", "$entry.key")'
+                    ),
+                  ]
+                ),
                 compoundExpression([
-                  qref('$condition.put("expression", "$condition.expression AND attribute_exists(#id)")'),
+                  qref(
+                    '$condition.put("expression", "$condition.expression AND attribute_exists(#id)")'
+                  ),
                   qref('$condition.expressionNames.put("#id", "id")'),
-                ]),
+                ])
               ),
             ]),
-            this.addDefaultConditionExpression('delete'),
+            this.addDefaultConditionExpression("delete")
           ),
           iff(
             ref(ResourceConstants.SNIPPETS.VersionedCondition),
             compoundExpression([
               // tslint:disable-next-line
               qref(
-                `$condition.put("expression", "($condition.expression) AND $${ResourceConstants.SNIPPETS.VersionedCondition}.expression")`,
+                `$condition.put("expression", "($condition.expression) AND $${ResourceConstants.SNIPPETS.VersionedCondition}.expression")`
               ),
-              qref(`$condition.expressionNames.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionNames)`),
-              set(ref('expressionValues'), raw('$util.defaultIfNull($condition.expressionValues, {})')),
-              qref(`$expressionValues.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionValues)`),
-              set(ref('condition.expressionValues'), ref('expressionValues')),
-            ]),
+              qref(
+                `$condition.expressionNames.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionNames)`
+              ),
+              set(
+                ref("expressionValues"),
+                raw("$util.defaultIfNull($condition.expressionValues, {})")
+              ),
+              qref(
+                `$expressionValues.putAll($${ResourceConstants.SNIPPETS.VersionedCondition}.expressionValues)`
+              ),
+              set(ref("condition.expressionValues"), ref("expressionValues")),
+            ])
           ),
           iff(
-            ref('context.args.condition'),
+            ref("context.args.condition"),
             compoundExpression([
               set(
-                ref('conditionFilterExpressions'),
-                raw('$util.parseJson($util.transform.toDynamoDBConditionExpression($context.args.condition))'),
+                ref("conditionFilterExpressions"),
+                raw(
+                  "$util.parseJson($util.transform.toDynamoDBConditionExpression($context.args.condition))"
+                )
               ),
               // tslint:disable-next-line
-              qref(`$condition.put("expression", "($condition.expression) AND $conditionFilterExpressions.expression")`),
-              qref(`$condition.expressionNames.putAll($conditionFilterExpressions.expressionNames)`),
-              set(ref('conditionExpressionValues'), raw('$util.defaultIfNull($condition.expressionValues, {})')),
-              qref(`$conditionExpressionValues.putAll($conditionFilterExpressions.expressionValues)`),
-              set(ref('condition.expressionValues'), ref('conditionExpressionValues')),
-              qref(`$condition.expressionValues.putAll($conditionFilterExpressions.expressionValues)`),
-            ]),
+              qref(
+                `$condition.put("expression", "($condition.expression) AND $conditionFilterExpressions.expression")`
+              ),
+              qref(
+                `$condition.expressionNames.putAll($conditionFilterExpressions.expressionNames)`
+              ),
+              set(
+                ref("conditionExpressionValues"),
+                raw("$util.defaultIfNull($condition.expressionValues, {})")
+              ),
+              qref(
+                `$conditionExpressionValues.putAll($conditionFilterExpressions.expressionValues)`
+              ),
+              set(
+                ref("condition.expressionValues"),
+                ref("conditionExpressionValues")
+              ),
+              qref(
+                `$condition.expressionValues.putAll($conditionFilterExpressions.expressionValues)`
+              ),
+            ])
           ),
           iff(
-            and([ref('condition.expressionValues'), raw('$condition.expressionValues.size() == 0')]),
+            and([
+              ref("condition.expressionValues"),
+              raw("$condition.expressionValues.size() == 0"),
+            ]),
             set(
-              ref('condition'),
+              ref("condition"),
               obj({
-                expression: ref('condition.expression'),
-                expressionNames: ref('condition.expressionNames'),
-              }),
-            ),
+                expression: ref("condition.expression"),
+                expressionNames: ref("condition.expressionNames"),
+              })
+            )
           ),
           DynamoDBMappingTemplate.deleteItem({
             key: ifElse(
               ref(ResourceConstants.SNIPPETS.ModelObjectKey),
-              raw(`$util.toJson(\$${ResourceConstants.SNIPPETS.ModelObjectKey})`),
+              raw(
+                `$util.toJson(\$${ResourceConstants.SNIPPETS.ModelObjectKey})`
+              ),
               obj({
-                id: ref('util.dynamodb.toDynamoDBJson($ctx.args.input.id)'),
+                id: ref("util.dynamodb.toDynamoDBJson($ctx.args.input.id)"),
               }),
-              true,
+              true
             ),
-            condition: ref('util.toJson($condition)'),
+            condition: ref("util.toJson($condition)"),
             isSyncEnabled,
           }),
-        ]),
+        ])
       ),
-      ResponseMappingTemplate: print(DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)),
-      ...(syncConfig && { SyncConfig: SyncUtils.syncResolverConfig(syncConfig) }),
+      ResponseMappingTemplate: print(
+        DynamoDBMappingTemplate.dynamoDBResponse(isSyncEnabled)
+      ),
+      ...(syncConfig && {
+        SyncConfig: SyncUtils.syncResolverConfig(syncConfig),
+      }),
     });
   }
 
@@ -832,37 +1205,49 @@ export class ResourceFactory {
    */
 
   private addDefaultConditionExpression = (operation: string): Expression => {
-    const attributeCheck = operation === 'create' ? 'attribute_not_exists' : 'attribute_exists';
+    const attributeCheck =
+      operation === "create" ? "attribute_not_exists" : "attribute_exists";
     return ifElse(
       ref(ResourceConstants.SNIPPETS.ModelObjectKey),
       compoundExpression([
         set(
-          ref('condition'),
+          ref("condition"),
           obj({
-            expression: str(''),
+            expression: str(""),
             expressionNames: obj({}),
             expressionValues: obj({}),
-          }),
+          })
         ),
-        forEach(ref('entry'), ref(`${ResourceConstants.SNIPPETS.ModelObjectKey}.entrySet()`), [
-          ifElse(
-            raw('$velocityCount == 1'),
-            qref(`$condition.put("expression", "${attributeCheck}(#keyCondition$velocityCount)")`),
-            qref('$condition.put(' + `"expression", "$condition.expression AND ${attributeCheck}(#keyCondition$velocityCount)")`),
-          ),
-          qref('$condition.expressionNames.put("#keyCondition$velocityCount", "$entry.key")'),
-        ]),
+        forEach(
+          ref("entry"),
+          ref(`${ResourceConstants.SNIPPETS.ModelObjectKey}.entrySet()`),
+          [
+            ifElse(
+              raw("$velocityCount == 1"),
+              qref(
+                `$condition.put("expression", "${attributeCheck}(#keyCondition$velocityCount)")`
+              ),
+              qref(
+                "$condition.put(" +
+                  `"expression", "$condition.expression AND ${attributeCheck}(#keyCondition$velocityCount)")`
+              )
+            ),
+            qref(
+              '$condition.expressionNames.put("#keyCondition$velocityCount", "$entry.key")'
+            ),
+          ]
+        ),
       ]),
       set(
-        ref('condition'),
+        ref("condition"),
         obj({
           expression: str(`${attributeCheck}(#id)`),
           expressionNames: obj({
-            '#id': str('id'),
+            "#id": str("id"),
           }),
           expressionValues: obj({}),
-        }),
-      ),
+        })
+      )
     );
   };
 }
