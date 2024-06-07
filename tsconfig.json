@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "strict": false, // TODO enable
+    "rootDir": "src",
+    "outDir": "lib",
+    "target": "ES2018" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017','ES2018' or 'ESNEXT'. */,
+    "module": "commonjs" /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */,
+    "lib": [
+      "DOM",
+      "ESnext"
+    ] /* Specify library files to be included in the compilation. */,
+    "declaration": true /* Generates corresponding '.d.ts' file. */,
+    "declarationMap": true /* Generates a sourcemap for each corresponding '.d.ts' file. */,
+    "sourceMap": true /* Generates corresponding '.map' file. */,
+    "composite": true /* Enable project compilation */,
+    "removeComments": true /* Do not emit comments to output. */,
+    "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,
+    "esModuleInterop": true /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */,
+
+    "experimentalDecorators": true /* Enables experimental support for ES7 decorators. */,
+    "emitDecoratorMetadata": true /* Enables experimental support for emitting type metadata for decorators. */,
+    "resolveJsonModule": true,
+    "preserveConstEnums": true,
+    "pretty": true,
+    "stripInternal": true
+  },
+  "exclude": ["**/__mocks__/**/*", "**/__tests__/**/*", "**/lib/**/*"]
+}
